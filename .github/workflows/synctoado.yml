@@ -16,6 +16,8 @@ jobs:
         AZUSERNAME: ${{secrets.AZUSERNAME}}
         AZUSER_EMAIL: ${{secrets.AZUSER_EMAIL}}
         AZORG: ${{secrets.AZORG}}
+        AZPROJECT: ${{secrets.AZPROJECT}}
+        AZREPO: ${{secrets.AZREPO}}
       run: |
          chmod +x ./script/commit.sh
          ./script/commit.sh # it will calls 'commit.sh' file. Thats where our logic is in.
