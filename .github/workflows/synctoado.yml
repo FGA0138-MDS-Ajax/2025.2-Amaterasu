@@ -9,7 +9,9 @@ jobs:
   check-bats-version:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v4
+      with:
+        fetch-depth: 0 # necessário para unshallow e with-lease funcionarem corretamente
     - name: Run script file
       env:
         AZUREPAT: ${{secrets.AZPAT}} # calling secrets from environment variables
@@ -18,6 +20,7 @@ jobs:
         AZORG: ${{secrets.AZORG}}
         AZPROJECT: ${{secrets.AZPROJECT}}
         AZREPO: ${{secrets.AZREPO}}
+        AZBRANCH: ${{ github.ref_name }}
       run: |
          chmod +x ./script/commit.sh
          ./script/commit.sh # it will calls 'commit.sh' file. Thats where our logic is in.

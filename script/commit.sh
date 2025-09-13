@@ -78,12 +78,39 @@ if ! git ls-remote "$CRED_URL" &>/dev/null; then
 	abort "Não foi possível acessar ${AZ_URL}. Verifique AZORG/AZPROJECT/AZREPO e permissões do PAT."
 fi
 
-# Tenta rebase a partir da branch remota (se existir). Não falha se branch ainda não existir.
-info "Sincronizando com remoto (pull --rebase)..."
-git pull --rebase "$CRED_URL" "$AZBRANCH" || info "Branch remota inexistente ou sem alterações; prosseguindo."
+# Usa um remote temporário para habilitar refs de rastreamento e evitar 'stale info' com --force-with-lease
+ADO_REMOTE="ado-tmp-$$"
+trap 'git remote remove "$ADO_REMOTE" 2>/dev/null || true' EXIT
+
+# Garante que o nome temporário não exista
+git remote remove "$ADO_REMOTE" 2>/dev/null || true
+git remote add "$ADO_REMOTE" "$CRED_URL"
+
+# Busca a referência do branch remoto (se existir)
+info "Sincronizando com remoto (fetch + rebase)..."
+if git fetch "$ADO_REMOTE" "$AZBRANCH":"refs/remotes/$ADO_REMOTE/$AZBRANCH" --prune 2>/dev/null; then
+	# Rebase local no topo do remoto, se houver
+	git rebase "refs/remotes/$ADO_REMOTE/$AZBRANCH" || abort "Falha no rebase contra remoto ${AZBRANCH}"
+else
+	info "Branch remota inexistente; prosseguindo sem rebase."
+fi
+
+# Obtém o commit esperado do branch remoto (se existir)
+expected_ref=""
+if expected_ref=$(git rev-parse --verify "refs/remotes/$ADO_REMOTE/$AZBRANCH" 2>/dev/null); then
+	:
+else
+	expected_ref=""
+fi
 
 # Push com segurança (with-lease) para evitar sobrescrever alterações remotas inadvertidamente
 info "Enviando alterações para Azure DevOps..."
-git push --force-with-lease "$CRED_URL" "HEAD:${AZBRANCH}"
+if [[ -n "$expected_ref" ]]; then
+	# Só força se o remoto ainda está no commit esperado
+	git push --force-with-lease="refs/heads/$AZBRANCH:$expected_ref" "$ADO_REMOTE" "HEAD:${AZBRANCH}"
+else
+	# Branch remoto ainda não existe; push simples é suficiente
+	git push "$ADO_REMOTE" "HEAD:${AZBRANCH}"
+fi
 
 info "Sync concluído com sucesso para ${AZ_URL} (${AZBRANCH})."
