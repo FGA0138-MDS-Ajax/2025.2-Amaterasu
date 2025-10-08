@@ -2,6 +2,7 @@
 
 import Image from "next/image";
 import Navbar from "../components/navbar/navbar";
+import MemberCard from "../components/memberCard/memberCard"
 import { Merriweather } from "next/font/google";
 
 const merriweather = Merriweather({
@@ -16,7 +17,6 @@ export default function SobrePage() {
 
       <main className="min-h-screen flex flex-col items-center bg-neutral-900 text-white">
         <section className="w-full max-w-[1920px] px-[128px] py-16 flex flex-col md:flex-row items-start justify-between gap-12">
-          {/* Texto */}
           <div className="md:w-1/2 mt-3">
             <h1 className={`${merriweather.className} text-4xl font-bold mb-3`}>
               Sobre
@@ -51,8 +51,6 @@ export default function SobrePage() {
               onde cada denúncia conta e pode fazer a diferença.
             </p>
           </div>
-
-          {/* Imagem */}
           <div className="md:w-1/2 flex justify-center items-end">
             <div className="bg-white rounded-[4rem] p-6 md:p-10">
               <Image
@@ -64,6 +62,9 @@ export default function SobrePage() {
               />
             </div>
           </div>
+        </section>
+        <section>
+          <MemberCard />
         </section>
       </main>
     </>
