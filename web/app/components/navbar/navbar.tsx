@@ -17,7 +17,6 @@ export default function Navbar() {
   return (
     <nav className="w-full bg-neutral-900 text-white border-b border-gray-700">
       <div className="flex items-center justify-between py-5 px-[128px] max-w-[1920px] mx-auto">
-        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/title2.svg"
@@ -28,7 +27,6 @@ export default function Navbar() {
           />
         </Link>
 
-        {/* Links */}
         <div className="flex items-center gap-8">
           {links.map((link) => {
             const active = pathname === link.href;

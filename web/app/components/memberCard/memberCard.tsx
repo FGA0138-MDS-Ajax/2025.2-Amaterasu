@@ -23,14 +23,14 @@ export default function MemberCard() {
       name: "Bruna Liberal",
       role: "Full Stack Developer",
       src: "https://avatars.githubusercontent.com/u/122989435?v=4",
-      linkedin: "",
+      linkedin: "https://www.linkedin.com/in/bruna-liberal-b1a43628a?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       github: "https://github.com/limonadaquente",
     },
     {
       name: "Giovanna Aguiar",
       role: "Full Stack Developer",
       src: "https://avatars.githubusercontent.com/u/175221432?v=4",
-      linkedin: "",
+      linkedin: "https://www.linkedin.com/in/giovanna-aguiar-037428242?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       github: "https://github.com/giovannabrito19",
     },
     {
@@ -44,7 +44,7 @@ export default function MemberCard() {
       name: "João Pedro Lopes",
       role: "Full Stack Developer",
       src: "https://avatars.githubusercontent.com/u/103763209?v=4",
-      linkedin: "",
+      linkedin: "https://www.linkedin.com/in/joao-lopes-cruz",
       github: "https://github.com/ojplc",
     },
     {
@@ -72,7 +72,7 @@ export default function MemberCard() {
       name: "Matheus Eiki",
       role: "Full Stack Developer",
       src: "https://avatars.githubusercontent.com/u/183874678?v=4",
-      linkedin: "",
+      linkedin: "https://www.linkedin.com/in/matheus-eiki?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       github: "https://github.com/Mateiki",
     },
     {
