@@ -32,14 +32,22 @@ public class ReportsController : ControllerBase
 
         try
         {
+            _logger.LogInformation("Received request to create report");
+            _logger.LogDebug("Create report payload received");
             var created = await _service.CreateAsync(request, cancellationToken);
 
+            _logger.LogInformation("Report {ReportId} created successfully", created.Id);
             return CreatedAtRoute("GetReportById", new { id = created.Id }, created);
         }
         catch (ArgumentException ex)
         {
             _logger.LogWarning(ex, "Invalid payload when creating report");
             return BadRequest(new { error = ex.Message });
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when creating report");
+            return Problem(title: "Unexpected error when creating report", statusCode: StatusCodes.Status500InternalServerError);
         }
     }
 
@@ -50,8 +58,18 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(typeof(IEnumerable<ReportResponse>), StatusCodes.Status200OK)]
     public async Task<IActionResult> GetAllAsync(CancellationToken cancellationToken)
     {
-        var reports = await _service.GetAllAsync(cancellationToken);
-        return Ok(reports);
+        try
+        {
+            _logger.LogInformation("Listing all reports");
+            var reports = await _service.GetAllAsync(cancellationToken);
+            _logger.LogInformation("Returned {Count} reports", reports.Count);
+            return Ok(reports);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when listing reports");
+            return Problem(title: "Unexpected error when listing reports", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>
@@ -67,8 +85,18 @@ public class ReportsController : ControllerBase
             return BadRequest(new { error = "The crimeGenre value is required." });
         }
 
-        var reports = await _service.GetByCrimeGenreAsync(crimeGenre, cancellationToken);
-        return Ok(reports);
+        try
+        {
+            _logger.LogInformation("Listing reports by crime genre {CrimeGenre}", crimeGenre);
+            var reports = await _service.GetByCrimeGenreAsync(crimeGenre, cancellationToken);
+            _logger.LogInformation("Returned {Count} reports for crime genre {CrimeGenre}", reports.Count, crimeGenre);
+            return Ok(reports);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when listing reports by crime genre {CrimeGenre}", crimeGenre);
+            return Problem(title: "Unexpected error when listing reports", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>
@@ -84,8 +112,18 @@ public class ReportsController : ControllerBase
             return BadRequest(new { error = "The crimeType value is required." });
         }
 
-        var reports = await _service.GetByCrimeTypeAsync(crimeType, cancellationToken);
-        return Ok(reports);
+        try
+        {
+            _logger.LogInformation("Listing reports by crime type {CrimeType}", crimeType);
+            var reports = await _service.GetByCrimeTypeAsync(crimeType, cancellationToken);
+            _logger.LogInformation("Returned {Count} reports for crime type {CrimeType}", reports.Count, crimeType);
+            return Ok(reports);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when listing reports by crime type {CrimeType}", crimeType);
+            return Problem(title: "Unexpected error when listing reports", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>
@@ -96,13 +134,24 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> GetByIdAsync(string id, CancellationToken cancellationToken)
     {
-        var report = await _service.GetByIdAsync(id, cancellationToken);
-        if (report is null)
+        try
         {
-            return NotFound();
-        }
+            _logger.LogInformation("Fetching report {ReportId}", id);
+            var report = await _service.GetByIdAsync(id, cancellationToken);
+            if (report is null)
+            {
+                _logger.LogInformation("Report {ReportId} not found", id);
+                return NotFound();
+            }
 
-        return Ok(report);
+            _logger.LogInformation("Report {ReportId} returned", id);
+            return Ok(report);
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when fetching report {ReportId}", id);
+            return Problem(title: "Unexpected error when fetching report", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>
@@ -121,12 +170,15 @@ public class ReportsController : ControllerBase
 
         try
         {
+            _logger.LogInformation("Updating report {ReportId}", id);
             var updated = await _service.UpdateAsync(id, request, cancellationToken);
             if (updated is null)
             {
+                _logger.LogInformation("Report {ReportId} not found for update", id);
                 return NotFound();
             }
 
+            _logger.LogInformation("Report {ReportId} updated", id);
             return Ok(updated);
         }
         catch (ArgumentException ex)
@@ -139,6 +191,11 @@ public class ReportsController : ControllerBase
             _logger.LogWarning(ex, "Invalid operation when updating report {ReportId}", id);
             return BadRequest(new { error = ex.Message });
         }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when updating report {ReportId}", id);
+            return Problem(title: "Unexpected error when updating report", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 
     /// <summary>
@@ -149,12 +206,23 @@ public class ReportsController : ControllerBase
     [ProducesResponseType(StatusCodes.Status404NotFound)]
     public async Task<IActionResult> DeleteAsync(string id, CancellationToken cancellationToken)
     {
-        var deleted = await _service.DeleteAsync(id, cancellationToken);
-        if (!deleted)
+        try
         {
-            return NotFound();
-        }
+            _logger.LogInformation("Deleting report {ReportId}", id);
+            var deleted = await _service.DeleteAsync(id, cancellationToken);
+            if (!deleted)
+            {
+                _logger.LogInformation("Report {ReportId} not found for deletion", id);
+                return NotFound();
+            }
 
-        return NoContent();
+            _logger.LogInformation("Report {ReportId} deleted", id);
+            return NoContent();
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error when deleting report {ReportId}", id);
+            return Problem(title: "Unexpected error when deleting report", statusCode: StatusCodes.Status500InternalServerError);
+        }
     }
 }

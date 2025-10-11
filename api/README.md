@@ -26,6 +26,18 @@ As definições ficam na seção `CosmosDB` dos arquivos `appsettings.json` ou v
 O contêiner é criado automaticamente se não existir, com chave de partição `/id`.
 Os campos `id` e `createdDate` são atribuídos automaticamente pela API; os demais campos devem ser informados na requisição de criação. O bloco `reporterDetails` é opcional e todos os seus atributos também são opcionais.
 
+### Application Insights
+
+Para habilitar telemetria, defina a connection string do Application Insights via configuração:
+
+```json
+"ApplicationInsights": {
+  "ConnectionString": "InstrumentationKey=xxxx;IngestionEndpoint=https://..."
+}
+```
+
+Em ambientes Azure App Service, utilize a variável `APPLICATIONINSIGHTS_CONNECTION_STRING` ou um segredo no Key Vault referenciado via App Settings.
+
 ## Executando o projeto
 
 ```bash

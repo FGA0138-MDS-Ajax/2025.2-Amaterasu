@@ -34,6 +34,7 @@ public class ReportService : IReportService
     {
         if (_container is not null)
         {
+            _logger.LogDebug("Cosmos container already initialized");
             return _container;
         }
 
@@ -42,14 +43,30 @@ public class ReportService : IReportService
         {
             if (_container is null)
             {
-                var databaseResponse = await _cosmosClient.CreateDatabaseIfNotExistsAsync(_options.DatabaseId, cancellationToken: cancellationToken);
-                var containerResponse = await databaseResponse.Database.CreateContainerIfNotExistsAsync(new ContainerProperties
-                {
-                    Id = _options.ContainerId,
-                    PartitionKeyPath = "/id"
-                }, cancellationToken: cancellationToken);
+                _logger.LogInformation("Initializing Cosmos database {DatabaseId} and container {ContainerId}", _options.DatabaseId, _options.ContainerId);
 
-                _container = containerResponse.Container;
+                try
+                {
+                    var databaseResponse = await _cosmosClient.CreateDatabaseIfNotExistsAsync(_options.DatabaseId, cancellationToken: cancellationToken);
+                    var containerResponse = await databaseResponse.Database.CreateContainerIfNotExistsAsync(new ContainerProperties
+                    {
+                        Id = _options.ContainerId,
+                        PartitionKeyPath = "/id"
+                    }, cancellationToken: cancellationToken);
+
+                    _container = containerResponse.Container;
+                    _logger.LogInformation("Cosmos container {ContainerId} ready", _options.ContainerId);
+                }
+                catch (CosmosException ex)
+                {
+                    _logger.LogCritical(ex, "Failed to initialize Cosmos resources {DatabaseId}/{ContainerId}", _options.DatabaseId, _options.ContainerId);
+                    throw;
+                }
+                catch (Exception ex)
+                {
+                    _logger.LogCritical(ex, "Unexpected error while initializing Cosmos resources {DatabaseId}/{ContainerId}", _options.DatabaseId, _options.ContainerId);
+                    throw;
+                }
             }
         }
         finally
@@ -62,6 +79,7 @@ public class ReportService : IReportService
 
     public async Task<ReportResponse> CreateAsync(CreateReportRequest request, CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Creating new report");
         var container = await GetContainerAsync(cancellationToken);
 
         var crimeGenre = request.CrimeGenre ?? throw new ArgumentException("The crimeGenre field is required.", nameof(request.CrimeGenre));
@@ -104,11 +122,18 @@ public class ReportService : IReportService
 
         try
         {
+            _logger.LogDebug("Persisting report {ReportId} in Cosmos", report.Id);
             await container.CreateItemAsync(report, new PartitionKey(report.PartitionKey), itemRequestOptions, cancellationToken);
+            _logger.LogInformation("Report {ReportId} created successfully", report.Id);
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to create report in Cosmos DB");
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected failure while creating report {ReportId}", report.Id);
             throw;
         }
 
@@ -117,6 +142,7 @@ public class ReportService : IReportService
 
     public async Task<IReadOnlyCollection<ReportResponse>> GetAllAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Fetching all reports");
         var container = await GetContainerAsync(cancellationToken);
         var results = new List<ReportResponse>();
 
@@ -138,10 +164,17 @@ public class ReportService : IReportService
                 _logger.LogError(ex, "Failed to fetch reports from Cosmos DB");
                 throw;
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while fetching all reports");
+                throw;
+            }
 
+            _logger.LogDebug("Fetched {Count} reports batch", response.Count);
             results.AddRange(response.Resource.Select(ReportResponse.FromModel));
         }
 
+        _logger.LogInformation("Returning {Count} reports", results.Count);
         return results;
     }
 
@@ -152,6 +185,7 @@ public class ReportService : IReportService
             throw new ArgumentException("The crimeGenre value is required.", nameof(crimeGenre));
         }
 
+        _logger.LogInformation("Fetching reports by crime genre {CrimeGenre}", crimeGenre);
         var container = await GetContainerAsync(cancellationToken);
         var results = new List<ReportResponse>();
 
@@ -180,10 +214,17 @@ public class ReportService : IReportService
                 _logger.LogError(ex, "Failed to fetch reports by crime genre {CrimeGenre} in Cosmos DB", normalizedCrimeGenre);
                 throw;
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while fetching reports by crime genre {CrimeGenre}", normalizedCrimeGenre);
+                throw;
+            }
 
+            _logger.LogDebug("Fetched {Count} reports batch for genre {CrimeGenre}", response.Count, normalizedCrimeGenre);
             results.AddRange(response.Resource.Select(ReportResponse.FromModel));
         }
 
+        _logger.LogInformation("Returning {Count} reports for crime genre {CrimeGenre}", results.Count, normalizedCrimeGenre);
         return results;
     }
 
@@ -194,6 +235,7 @@ public class ReportService : IReportService
             throw new ArgumentException("The crimeType value is required.", nameof(crimeType));
         }
 
+        _logger.LogInformation("Fetching reports by crime type {CrimeType}", crimeType);
         var container = await GetContainerAsync(cancellationToken);
         var results = new List<ReportResponse>();
 
@@ -222,10 +264,17 @@ public class ReportService : IReportService
                 _logger.LogError(ex, "Failed to fetch reports by crime type {CrimeType} in Cosmos DB", normalizedCrimeType);
                 throw;
             }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Unexpected error while fetching reports by crime type {CrimeType}", normalizedCrimeType);
+                throw;
+            }
 
+            _logger.LogDebug("Fetched {Count} reports batch for crime type {CrimeType}", response.Count, normalizedCrimeType);
             results.AddRange(response.Resource.Select(ReportResponse.FromModel));
         }
 
+        _logger.LogInformation("Returning {Count} reports for crime type {CrimeType}", results.Count, normalizedCrimeType);
         return results;
     }
 
@@ -236,19 +285,27 @@ public class ReportService : IReportService
             throw new ArgumentException("The report id is required.", nameof(id));
         }
 
+        _logger.LogInformation("Fetching report {ReportId}", id);
         var container = await GetContainerAsync(cancellationToken);
         try
         {
             var response = await container.ReadItemAsync<Report>(id, new PartitionKey(id), cancellationToken: cancellationToken);
+            _logger.LogDebug("Report {ReportId} found", id);
             return ReportResponse.FromModel(response.Resource);
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
+            _logger.LogInformation("Report {ReportId} not found", id);
             return null;
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to fetch report {ReportId}", id);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while fetching report {ReportId}", id);
             throw;
         }
     }
@@ -260,20 +317,28 @@ public class ReportService : IReportService
             throw new ArgumentException("The report id is required.", nameof(id));
         }
 
+        _logger.LogInformation("Updating report {ReportId}", id);
         var container = await GetContainerAsync(cancellationToken);
         Report existing;
         try
         {
             var readResponse = await container.ReadItemAsync<Report>(id, new PartitionKey(id), cancellationToken: cancellationToken);
             existing = readResponse.Resource;
+            _logger.LogDebug("Loaded existing report {ReportId} for update", id);
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
+            _logger.LogInformation("Report {ReportId} not found for update", id);
             return null;
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to fetch report for update {ReportId}", id);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while preparing update for report {ReportId}", id);
             throw;
         }
 
@@ -438,11 +503,17 @@ public class ReportService : IReportService
                 updatedResource = existing;
             }
 
+            _logger.LogInformation("Report {ReportId} updated successfully", id);
             return ReportResponse.FromModel(updatedResource);
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to update report {ReportId}", id);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while updating report {ReportId}", id);
             throw;
         }
     }
@@ -454,20 +525,28 @@ public class ReportService : IReportService
             return false;
         }
 
+        _logger.LogInformation("Deleting report {ReportId}", id);
         var container = await GetContainerAsync(cancellationToken);
 
         try
         {
             await container.DeleteItemAsync<Report>(id, new PartitionKey(id), cancellationToken: cancellationToken);
+            _logger.LogInformation("Report {ReportId} deleted successfully", id);
             return true;
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
+            _logger.LogInformation("Report {ReportId} not found for deletion", id);
             return false;
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to delete report {ReportId}", id);
+            throw;
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Unexpected error while deleting report {ReportId}", id);
             throw;
         }
     }

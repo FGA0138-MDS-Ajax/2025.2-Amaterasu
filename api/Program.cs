@@ -1,4 +1,5 @@
 using Microsoft.Azure.Cosmos;
+using Microsoft.Extensions.Logging.ApplicationInsights;
 using Microsoft.Extensions.Options;
 using Microsoft.OpenApi.Models;
 using ReportsApi.Configuration;
@@ -31,6 +32,21 @@ builder.Services.AddSingleton(sp =>
 	return new CosmosClient(options.ConnectionString, clientOptions);
 });
 
+builder.Services.AddApplicationInsightsTelemetry(options =>
+{
+	var connectionString = builder.Configuration["ApplicationInsights:ConnectionString"];
+	if (!string.IsNullOrWhiteSpace(connectionString))
+	{
+		options.ConnectionString = connectionString;
+	}
+
+	options.EnableQuickPulseMetricStream = true;
+	options.EnableAdaptiveSampling = false;
+});
+
+builder.Logging.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Information);
+builder.Logging.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Warning);
+
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();
@@ -39,9 +55,9 @@ builder.Services.AddSwaggerGen(options =>
 {
 	options.SwaggerDoc("v1", new OpenApiInfo
 	{
-		Title = "Incident Reports API",
+		Title = "Reports API",
 		Version = "v1",
-		Description = "API to manage incident reports stored in Azure Cosmos DB."
+		Description = "API to manage reports stored in Azure Cosmos DB."
 	});
 });
 
@@ -54,7 +70,7 @@ if (app.Environment.IsDevelopment())
 	app.UseSwagger();
 	app.UseSwaggerUI(options =>
 	{
-		options.SwaggerEndpoint("/swagger/v1/swagger.json", "Incident Reports API v1");
+		options.SwaggerEndpoint("/swagger/v1/swagger.json", "Reports API v1");
 	});
 }
 app.MapControllers();
