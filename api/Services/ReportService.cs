@@ -1,5 +1,5 @@
+using System.Globalization;
 using System.Net;
-using System.Linq;
 using Microsoft.Azure.Cosmos;
 using Microsoft.Extensions.Options;
 using ReportsApi.Configuration;
@@ -15,12 +15,18 @@ public class ReportService : IReportService
     private readonly ILogger<ReportService> _logger;
     private Container? _container;
     private readonly SemaphoreSlim _initializationLock = new(1, 1);
+    private readonly ICosmosTelemetry _cosmosTelemetry;
 
-    public ReportService(CosmosClient cosmosClient, IOptions<CosmosOptions> options, ILogger<ReportService> logger)
+    public ReportService(
+        CosmosClient cosmosClient,
+        IOptions<CosmosOptions> options,
+        ILogger<ReportService> logger,
+        ICosmosTelemetry cosmosTelemetry)
     {
         _cosmosClient = cosmosClient;
         _options = options.Value;
         _logger = logger;
+        _cosmosTelemetry = cosmosTelemetry;
     }
 
     private static DateTime NormalizeDateTime(DateTime dateTime) => dateTime.Kind switch
@@ -48,6 +54,14 @@ public class ReportService : IReportService
                 try
                 {
                     var databaseResponse = await _cosmosClient.CreateDatabaseIfNotExistsAsync(_options.DatabaseId, cancellationToken: cancellationToken);
+                    _cosmosTelemetry.TrackRequestUnits(
+                        "CosmosDatabaseCreateIfNotExists",
+                        databaseResponse.RequestCharge,
+                        new Dictionary<string, string?>
+                        {
+                            ["operationStatus"] = databaseResponse.StatusCode.ToString()
+                        });
+
                     var containerResponse = await databaseResponse.Database.CreateContainerIfNotExistsAsync(new ContainerProperties
                     {
                         Id = _options.ContainerId,
@@ -55,11 +69,25 @@ public class ReportService : IReportService
                     }, cancellationToken: cancellationToken);
 
                     _container = containerResponse.Container;
+                    _cosmosTelemetry.TrackRequestUnits(
+                        "CosmosContainerCreateIfNotExists",
+                        containerResponse.RequestCharge,
+                        new Dictionary<string, string?>
+                        {
+                            ["operationStatus"] = containerResponse.StatusCode.ToString()
+                        });
                     _logger.LogInformation("Cosmos container {ContainerId} ready", _options.ContainerId);
                 }
                 catch (CosmosException ex)
                 {
                     _logger.LogCritical(ex, "Failed to initialize Cosmos resources {DatabaseId}/{ContainerId}", _options.DatabaseId, _options.ContainerId);
+                    _cosmosTelemetry.TrackRequestUnits(
+                        "CosmosInitializationFailed",
+                        ex.RequestCharge,
+                        new Dictionary<string, string?>
+                        {
+                            ["statusCode"] = ex.StatusCode.ToString()
+                        });
                     throw;
                 }
                 catch (Exception ex)
@@ -123,12 +151,28 @@ public class ReportService : IReportService
         try
         {
             _logger.LogDebug("Persisting report {ReportId} in Cosmos", report.Id);
-            await container.CreateItemAsync(report, new PartitionKey(report.PartitionKey), itemRequestOptions, cancellationToken);
+            var response = await container.CreateItemAsync(report, new PartitionKey(report.PartitionKey), itemRequestOptions, cancellationToken);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportCreate",
+                response.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["partitionKeyPath"] = "/id",
+                    ["statusCode"] = response.StatusCode.ToString()
+                });
             _logger.LogInformation("Report {ReportId} created successfully", report.Id);
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to create report in Cosmos DB");
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportCreateFailed",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString(),
+                    ["partitionKeyPath"] = "/id"
+                });
             throw;
         }
         catch (Exception ex)
@@ -145,6 +189,8 @@ public class ReportService : IReportService
         _logger.LogInformation("Fetching all reports");
         var container = await GetContainerAsync(cancellationToken);
         var results = new List<ReportResponse>();
+        double totalRequestCharge = 0;
+        var pageIndex = 0;
 
         var queryIterator = container.GetItemQueryIterator<Report>(requestOptions: new QueryRequestOptions
         {
@@ -162,6 +208,13 @@ public class ReportService : IReportService
             catch (CosmosException ex)
             {
                 _logger.LogError(ex, "Failed to fetch reports from Cosmos DB");
+                _cosmosTelemetry.TrackRequestUnits(
+                    "ReportQueryAllFailed",
+                    ex.RequestCharge,
+                    new Dictionary<string, string?>
+                    {
+                        ["statusCode"] = ex.StatusCode.ToString()
+                    });
                 throw;
             }
             catch (Exception ex)
@@ -171,8 +224,26 @@ public class ReportService : IReportService
             }
 
             _logger.LogDebug("Fetched {Count} reports batch", response.Count);
+            totalRequestCharge += response.RequestCharge;
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportQueryAllPage",
+                response.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["pageIndex"] = pageIndex.ToString(CultureInfo.InvariantCulture),
+                    ["queryName"] = "GetAllReports"
+                });
+            pageIndex++;
             results.AddRange(response.Resource.Select(ReportResponse.FromModel));
         }
+
+        _cosmosTelemetry.TrackRequestUnits(
+            "ReportQueryAllTotal",
+            totalRequestCharge,
+            new Dictionary<string, string?>
+            {
+                ["pages"] = pageIndex.ToString(CultureInfo.InvariantCulture)
+            });
 
         _logger.LogInformation("Returning {Count} reports", results.Count);
         return results;
@@ -188,6 +259,8 @@ public class ReportService : IReportService
         _logger.LogInformation("Fetching reports by crime genre {CrimeGenre}", crimeGenre);
         var container = await GetContainerAsync(cancellationToken);
         var results = new List<ReportResponse>();
+        double totalRequestCharge = 0;
+        var pageIndex = 0;
 
         var normalizedCrimeGenre = crimeGenre.Trim();
 
@@ -212,6 +285,14 @@ public class ReportService : IReportService
             catch (CosmosException ex)
             {
                 _logger.LogError(ex, "Failed to fetch reports by crime genre {CrimeGenre} in Cosmos DB", normalizedCrimeGenre);
+                _cosmosTelemetry.TrackRequestUnits(
+                    "ReportQueryByGenreFailed",
+                    ex.RequestCharge,
+                    new Dictionary<string, string?>
+                    {
+                        ["statusCode"] = ex.StatusCode.ToString(),
+                        ["crimeGenre"] = normalizedCrimeGenre
+                    });
                 throw;
             }
             catch (Exception ex)
@@ -221,8 +302,27 @@ public class ReportService : IReportService
             }
 
             _logger.LogDebug("Fetched {Count} reports batch for genre {CrimeGenre}", response.Count, normalizedCrimeGenre);
+            totalRequestCharge += response.RequestCharge;
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportQueryByGenrePage",
+                response.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["pageIndex"] = pageIndex.ToString(CultureInfo.InvariantCulture),
+                    ["crimeGenre"] = normalizedCrimeGenre
+                });
+            pageIndex++;
             results.AddRange(response.Resource.Select(ReportResponse.FromModel));
         }
+
+        _cosmosTelemetry.TrackRequestUnits(
+            "ReportQueryByGenreTotal",
+            totalRequestCharge,
+            new Dictionary<string, string?>
+            {
+                ["pages"] = pageIndex.ToString(CultureInfo.InvariantCulture),
+                ["crimeGenre"] = normalizedCrimeGenre
+            });
 
         _logger.LogInformation("Returning {Count} reports for crime genre {CrimeGenre}", results.Count, normalizedCrimeGenre);
         return results;
@@ -238,6 +338,8 @@ public class ReportService : IReportService
         _logger.LogInformation("Fetching reports by crime type {CrimeType}", crimeType);
         var container = await GetContainerAsync(cancellationToken);
         var results = new List<ReportResponse>();
+        double totalRequestCharge = 0;
+        var pageIndex = 0;
 
         var normalizedCrimeType = crimeType.Trim();
 
@@ -262,6 +364,14 @@ public class ReportService : IReportService
             catch (CosmosException ex)
             {
                 _logger.LogError(ex, "Failed to fetch reports by crime type {CrimeType} in Cosmos DB", normalizedCrimeType);
+                _cosmosTelemetry.TrackRequestUnits(
+                    "ReportQueryByTypeFailed",
+                    ex.RequestCharge,
+                    new Dictionary<string, string?>
+                    {
+                        ["statusCode"] = ex.StatusCode.ToString(),
+                        ["crimeType"] = normalizedCrimeType
+                    });
                 throw;
             }
             catch (Exception ex)
@@ -271,8 +381,27 @@ public class ReportService : IReportService
             }
 
             _logger.LogDebug("Fetched {Count} reports batch for crime type {CrimeType}", response.Count, normalizedCrimeType);
+            totalRequestCharge += response.RequestCharge;
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportQueryByTypePage",
+                response.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["pageIndex"] = pageIndex.ToString(CultureInfo.InvariantCulture),
+                    ["crimeType"] = normalizedCrimeType
+                });
+            pageIndex++;
             results.AddRange(response.Resource.Select(ReportResponse.FromModel));
         }
+
+        _cosmosTelemetry.TrackRequestUnits(
+            "ReportQueryByTypeTotal",
+            totalRequestCharge,
+            new Dictionary<string, string?>
+            {
+                ["pages"] = pageIndex.ToString(CultureInfo.InvariantCulture),
+                ["crimeType"] = normalizedCrimeType
+            });
 
         _logger.LogInformation("Returning {Count} reports for crime type {CrimeType}", results.Count, normalizedCrimeType);
         return results;
@@ -290,17 +419,38 @@ public class ReportService : IReportService
         try
         {
             var response = await container.ReadItemAsync<Report>(id, new PartitionKey(id), cancellationToken: cancellationToken);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportReadById",
+                response.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = response.StatusCode.ToString()
+                });
             _logger.LogDebug("Report {ReportId} found", id);
             return ReportResponse.FromModel(response.Resource);
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             _logger.LogInformation("Report {ReportId} not found", id);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportReadByIdNotFound",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString()
+                });
             return null;
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to fetch report {ReportId}", id);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportReadByIdFailed",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString()
+                });
             throw;
         }
         catch (Exception ex)
@@ -324,16 +474,37 @@ public class ReportService : IReportService
         {
             var readResponse = await container.ReadItemAsync<Report>(id, new PartitionKey(id), cancellationToken: cancellationToken);
             existing = readResponse.Resource;
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportUpdateReadExisting",
+                readResponse.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = readResponse.StatusCode.ToString()
+                });
             _logger.LogDebug("Loaded existing report {ReportId} for update", id);
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             _logger.LogInformation("Report {ReportId} not found for update", id);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportUpdateReadMissing",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString()
+                });
             return null;
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to fetch report for update {ReportId}", id);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportUpdateReadFailed",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString()
+                });
             throw;
         }
         catch (Exception ex)
@@ -463,6 +634,14 @@ public class ReportService : IReportService
                 cancellationToken: cancellationToken);
 
             var updatedResource = response.Resource;
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportUpdatePatch",
+                response.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = response.StatusCode.ToString(),
+                    ["operations"] = operations.Count.ToString(CultureInfo.InvariantCulture)
+                });
             if (updatedResource is null)
             {
                 if (updatedCrimeGenre is not null)
@@ -509,6 +688,13 @@ public class ReportService : IReportService
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to update report {ReportId}", id);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportUpdatePatchFailed",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString()
+                });
             throw;
         }
         catch (Exception ex)
@@ -530,18 +716,39 @@ public class ReportService : IReportService
 
         try
         {
-            await container.DeleteItemAsync<Report>(id, new PartitionKey(id), cancellationToken: cancellationToken);
+            var response = await container.DeleteItemAsync<Report>(id, new PartitionKey(id), cancellationToken: cancellationToken);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportDelete",
+                response.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = response.StatusCode.ToString()
+                });
             _logger.LogInformation("Report {ReportId} deleted successfully", id);
             return true;
         }
         catch (CosmosException ex) when (ex.StatusCode == HttpStatusCode.NotFound)
         {
             _logger.LogInformation("Report {ReportId} not found for deletion", id);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportDeleteNotFound",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString()
+                });
             return false;
         }
         catch (CosmosException ex)
         {
             _logger.LogError(ex, "Failed to delete report {ReportId}", id);
+            _cosmosTelemetry.TrackRequestUnits(
+                "ReportDeleteFailed",
+                ex.RequestCharge,
+                new Dictionary<string, string?>
+                {
+                    ["statusCode"] = ex.StatusCode.ToString()
+                });
             throw;
         }
         catch (Exception ex)

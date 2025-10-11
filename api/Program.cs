@@ -44,9 +44,10 @@ builder.Services.AddApplicationInsightsTelemetry(options =>
 	options.EnableAdaptiveSampling = false;
 });
 
-builder.Logging.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Information);
+builder.Logging.AddFilter<ApplicationInsightsLoggerProvider>(string.Empty, LogLevel.Debug);
 builder.Logging.AddFilter<ApplicationInsightsLoggerProvider>("Microsoft", LogLevel.Warning);
 
+builder.Services.AddSingleton<ICosmosTelemetry, CosmosTelemetry>();
 builder.Services.AddScoped<IReportService, ReportService>();
 builder.Services.AddControllers();
 builder.Services.AddHealthChecks();

@@ -38,6 +38,17 @@ Para habilitar telemetria, defina a connection string do Application Insights vi
 
 Em ambientes Azure App Service, utilize a variável `APPLICATIONINSIGHTS_CONNECTION_STRING` ou um segredo no Key Vault referenciado via App Settings.
 
+#### Métricas de RUs (Cosmos DB)
+
+A API publica a métrica personalizada `cosmos.request.units` no Application Insights para cada operação executada no Cosmos DB. As dimensões incluem:
+
+- `operation`: nome lógico da operação (ex.: `ReportCreate`, `ReportQueryByGenreTotal`).
+- `databaseId` / `containerId`: alvo no Cosmos DB.
+- `statusCode`: resposta HTTP retornada pelo Cosmos (quando disponível).
+- Filtros específicos (`crimeGenre`, `crimeType`, `pages`, etc.), quando aplicável.
+
+Use o recurso **Metrics** do Application Insights para monitorar o consumo de RUs por operação e criar alertas conforme necessário.
+
 ## Executando o projeto
 
 ```bash
