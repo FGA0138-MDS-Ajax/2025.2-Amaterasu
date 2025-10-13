@@ -1,0 +1,51 @@
+# OS
+.DS_Store
+Thumbs.db
+
+# Visual Studio / .NET
+.vs/
+*.user
+*.suo
+*.userosscache
+*.sln.docstates
+
+# Build artifacts
+bin/
+obj/
+[Bb]uild/
+[Rr]elease/
+[Dd]ebug/
+[Tt]est[Rr]esults/
+
+# NuGet
+*.nupkg
+packages/
+.nuget/
+project.lock.json
+project.fragment.lock.json
+artifacts/
+
+# Rider/JetBrains
+.idea/
+*.sln.iml
+
+# Logs
+*.log
+
+# Node (if added later)
+node_modules/
+.next/
+.out/
+yarn.lock
+pnpm-lock.yaml
+
+# Azure Functions local settings (if used later)
+local.settings.json
+
+# Environment files (never commit secrets)
+.env
+.env.*
+!.env.example
+
+# Coverage
+coverage/
