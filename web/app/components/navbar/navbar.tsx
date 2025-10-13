@@ -11,7 +11,7 @@ export default function Navbar() {
     { href: "/", label: "Início" },
     { href: "/sobre", label: "Sobre" },
     { href: "/dashboards", label: "Dashboards" },
-    { href: "/denuncia", label: "Denúncia" },
+    { href: "/denuncia", label: "Fazer Denúncia" },
   ];
 
   return (
@@ -19,7 +19,7 @@ export default function Navbar() {
       <div className="flex items-center justify-between py-5 px-[128px] max-w-[1920px] mx-auto">
         <Link href="/" className="flex items-center gap-2">
           <Image
-            src="/title2.svg"
+            src="/logo2.svg"
             alt="SafeZone Logo"
             width={75}
             height={75}

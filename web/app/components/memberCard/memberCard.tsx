@@ -7,77 +7,77 @@ export default function MemberCard() {
   const members = [
     {
       name: "André Belarmino",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/168923024?v=4",
       linkedin: "https://www.linkedin.com/in/andr%C3%A9-belarmino-a62a39355?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       github: "https://github.com/andrehsb",
     },
     {
       name: "Arthur Mendes",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/213681539?v=4",
       linkedin: "https://www.linkedin.com/in/arthur-mendes-borges-956805368/",
       github: "https://github.com/artmendess",
     },
     {
       name: "Bruna Liberal",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/122989435?v=4",
       linkedin: "https://www.linkedin.com/in/bruna-liberal-b1a43628a?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       github: "https://github.com/limonadaquente",
     },
     {
       name: "Giovanna Aguiar",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/175221432?v=4",
       linkedin: "https://www.linkedin.com/in/giovanna-aguiar-037428242?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       github: "https://github.com/giovannabrito19",
     },
     {
       name: "Giovanna Felipe",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/172992124?v=4",
       linkedin: "https://www.linkedin.com/in/giovanna-felipe-31m2006?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app",
       github: "https://github.com/giovannafg",
     },
     {
       name: "João Pedro Lopes",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/103763209?v=4",
       linkedin: "https://www.linkedin.com/in/joao-lopes-cruz",
       github: "https://github.com/ojplc",
     },
     {
       name: "Joaquim Viana",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/132113244?v=4",
       linkedin: "https://www.linkedin.com/in/joaquim-jos%C3%A9-da-fonseca-viana-b674a3279/",
       github: "https://github.com/jj-viana",
     },
     {
       name: "Johnnatan Salles",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/169405654?v=4",
       linkedin: "https://www.linkedin.com/in/johnnatan-de-salles-sanches-00287a221/",
       github: "https://github.com/jsalless",
     },
     {
       name: "Luís Felipe Cunha",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/87036806?v=4",
       linkedin: "https://www.linkedin.com/in/lu%C3%ADs-felipe-parreira-cunha-069887306?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=ios_app",
       github: "https://github.com/cunha-luiss",
     },
     {
       name: "Matheus Eiki",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/183874678?v=4",
       linkedin: "https://www.linkedin.com/in/matheus-eiki?utm_source=share&utm_campaign=share_via&utm_content=profile&utm_medium=android_app",
       github: "https://github.com/Mateiki",
     },
     {
       name: "Renato Gameiro",
-      role: "Full Stack Developer",
+      role: "Desenvolvedor Full Stack",
       src: "https://avatars.githubusercontent.com/u/163028483?v=4",
       linkedin: "https://www.linkedin.com/in/renato-gameiro-38664421a",
       github: "https://github.com/renatoyx",
@@ -87,7 +87,7 @@ export default function MemberCard() {
   return (
     <section className="w-full py-16 px-[114px] bg-gray-50 dark:bg-[#111]">
       <h2 className="text-3xl font-bold text-center mb-10 text-gray-900 dark:text-gray-100">
-        Project Team
+        Equipe de Desenvolvimento
       </h2>
 
       <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-10 justify-items-center">
