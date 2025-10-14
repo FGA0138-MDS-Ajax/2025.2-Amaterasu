@@ -6,13 +6,15 @@ import { IoIosArrowRoundDown } from "react-icons/io"
 import { FiLock } from "react-icons/fi"
 import { useEffect, useState } from "react"
 import MapaDepoimentos from "./components/map/map"
+import DenunciaModal from "./components/denuncia/denuncia"
 
 export default function Home() {
   const [locks, setLocks] = useState<any[]>([])
+  const [showModal, setShowModal] = useState(false)
 
   useEffect(() => {
     const newLocks = [...Array(10)].map(() => ({
-      size: Math.random() * 60 + 40,
+      size: Math.random() * 60 + 60,
       top: Math.random() * 90,
       left: Math.random() * 90,
       delay: Math.random() * 5,
@@ -26,6 +28,7 @@ export default function Home() {
   return (
     <>
       <div className="relative min-h-screen overflow-hidden flex flex-col justify-between text-white bg-neutral-900">
+        {/* Fundo com cadeados */}
         <div className="absolute inset-0 overflow-hidden">
           {locks.map((lock, i) => (
             <motion.div
@@ -51,32 +54,25 @@ export default function Home() {
               <FiLock />
             </motion.div>
           ))}
-
-          <motion.div
-            className="absolute inset-0"
-            style={{
-              background:
-                "radial-gradient(circle at 30% 20%, rgba(147,51,234,0.15), transparent 60%), radial-gradient(circle at 70% 80%, rgba(59,130,246,0.15), transparent 60%)",
-            }}
-            animate={{
-              backgroundPosition: ["0% 0%", "100% 100%", "0% 0%"],
-            }}
-            transition={{
-              duration: 20,
-              repeat: Infinity,
-              ease: "linear",
-            }}
-          />
         </div>
 
+        {/* Navegação */}
         <nav className="relative z-10 w-full flex justify-center pt-6">
           <ul className="flex gap-20 text-lg font-medium">
             <li><Link href="/sobre" className="hover:text-gray-300 transition-colors">Sobre</Link></li>
             <li><Link href="/dashboards" className="hover:text-gray-300 transition-colors">Dashboards</Link></li>
-            <li><Link href="/denuncia" className="hover:text-gray-300 transition-colors">Fazer Denúncia</Link></li>
+            <li>
+              <button
+                onClick={() => setShowModal(true)}
+                className="hover:text-gray-300 transition-colors"
+              >
+                Fazer Denúncia
+              </button>
+            </li>
           </ul>
         </nav>
 
+        {/* Logo */}
         <div className="relative z-10 flex-1 flex items-center justify-center">
           <img
             src="/logo.svg"
@@ -85,12 +81,18 @@ export default function Home() {
           />
         </div>
 
+        {/* Scroll down */}
         <div className="relative z-10 pb-6 flex flex-col items-center text-gray-400">
           <p className="text-sm">Role para baixo</p>
           <IoIosArrowRoundDown className="text-3xl animate-bounce mt-1" />
         </div>
       </div>
+
+      {/* Mapa */}
       <MapaDepoimentos />
+
+      {/* Modal */}
+      <DenunciaModal show={showModal} onCloseAction={() => setShowModal(false)} />
     </>
   )
 }

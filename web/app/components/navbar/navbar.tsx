@@ -4,19 +4,23 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 
-export default function Navbar() {
+interface NavbarProps {
+  onOpenDenuncia?: () => void;
+}
+
+export default function Navbar({ onOpenDenuncia }: NavbarProps) {
   const pathname = usePathname();
 
   const links = [
     { href: "/", label: "Início" },
     { href: "/sobre", label: "Sobre" },
     { href: "/dashboards", label: "Dashboards" },
-    { href: "/denuncia", label: "Fazer Denúncia" },
   ];
 
   return (
     <nav className="w-full bg-neutral-900 text-white border-b border-gray-700">
       <div className="flex items-center justify-between py-5 px-[128px] max-w-[1920px] mx-auto">
+        {/* Logo */}
         <Link href="/" className="flex items-center gap-2">
           <Image
             src="/logo2.svg"
@@ -27,6 +31,7 @@ export default function Navbar() {
           />
         </Link>
 
+        {/* Links e botão */}
         <div className="flex items-center gap-8">
           {links.map((link) => {
             const active = pathname === link.href;
@@ -34,16 +39,24 @@ export default function Navbar() {
               <Link
                 key={link.href}
                 href={link.href}
-                className={`text-sm md:text-base transition-all duration-200 pb-0 ${
+                className={`text-sm md:text-base transition-all duration-200 pb-1 border-b-2 ${
                   active
-                    ? "border-b-2 border-cyan-400 font-semibold"
-                    : "text-gray-300 hover:text-white border-b-2 border-transparent"
+                    ? "border-cyan-400 text-white font-semibold"
+                    : "border-transparent text-gray-300 hover:text-white hover:border-cyan-400"
                 }`}
               >
                 {link.label}
               </Link>
             );
           })}
+
+          {/* Botão de denúncia com o mesmo estilo dos outros */}
+          <button
+            onClick={onOpenDenuncia}
+            className="text-sm md:text-base pb-1 border-b-2 border-transparent text-gray-300 hover:text-white hover:border-cyan-400 transition-all duration-200"
+          >
+            Fazer Denúncia
+          </button>
         </div>
       </div>
     </nav>
